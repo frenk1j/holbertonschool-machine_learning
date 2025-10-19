@@ -6,5 +6,5 @@ Transposes a numpy.ndarray without loops or conditionals.
 
 
 def np_transpose(matrix):
-    """Returns a new numpy.ndarray which is the transpose of the input matrix"""
+    """Return a new numpy.ndarray which is the transpose of the input"""
     return matrix.T.copy()
