@@ -22,3 +22,24 @@ class Poisson:
                 raise ValueError("data must contain multiple values")
             # Calculate lambtha as the mean of data
             self.lambtha = float(sum(data) / len(data))
+
+    def pmf(self, k):
+        """Calculates the value of the PMF for a given number of 'successes'
+        Args:
+            k (int): number of occurrences
+        Returns:
+            float: PMF value for k, or 0 if k < 0
+        """
+        if not isinstance(k, int):
+            k = int(k)
+        if k < 0:
+            return 0
+
+        # Formula: P(k) = (e^(-λ) * λ^k) / k!
+        e = 2.7182818285  # approximate value of e
+        factorial = 1
+        for i in range(1, k + 1):
+            factorial *= i
+
+        pmf_value = ((e ** (-self.lambtha)) * (self.lambtha ** k)) / factorial
+        return pmf_value
