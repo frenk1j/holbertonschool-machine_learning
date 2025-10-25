@@ -47,7 +47,6 @@ class Binomial:
         if k < 0 or k > self.n:
             return 0
 
-        # Formula: P(k) = C(n, k) * p^k * (1 - p)^(n - k)
         def factorial(num):
             """Helper to calculate factorial"""
             if num == 0 or num == 1:
@@ -60,3 +59,23 @@ class Binomial:
         nCk = factorial(self.n) / (factorial(k) * factorial(self.n - k))
         pmf_value = nCk * (self.p ** k) * ((1 - self.p) ** (self.n - k))
         return pmf_value
+
+    def cdf(self, k):
+        """Calculates the value of the CDF for a given number of 'successes'
+        Args:
+            k (int): number of successes
+        Returns:
+            float: CDF value for k, or 0 if k is out of range
+        """
+        if not isinstance(k, int):
+            k = int(k)
+        if k < 0:
+            return 0
+        if k > self.n:
+            k = self.n
+
+        # Sum of PMF values from 0 to k
+        cdf_value = 0
+        for i in range(k + 1):
+            cdf_value += self.pmf(i)
+        return cdf_value
