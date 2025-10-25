@@ -37,3 +37,18 @@ class Exponential:
         e = 2.7182818285  # approximate value of e
         pdf_value = self.lambtha * (e ** (-self.lambtha * x))
         return pdf_value
+
+    def cdf(self, x):
+        """Calculates the value of the CDF for a given time period
+        Args:
+            x (float): the time period
+        Returns:
+            float: CDF value for x, or 0 if x < 0
+        """
+        if x < 0:
+            return 0
+
+        # Formula: F(x) = 1 - e^(-λx)
+        e = 2.7182818285
+        cdf_value = 1 - (e ** (-self.lambtha * x))
+        return cdf_value
