@@ -1,18 +1,46 @@
-# Poisson Distribution
+# Probability Distributions
 
-## Overview
-This project implements a class `Poisson` that represents a **Poisson probability distribution**.  
-The Poisson distribution is used to model the number of occurrences of an event within a fixed interval of time or space when the events occur independently and with a known constant mean rate.
+This project is part of the **Holberton School Machine Learning** curriculum.  
+It implements four probability distribution classes in pure Python:
+
+- **Poisson**
+- **Exponential**
+- **Normal (Gaussian)**
+- **Binomial**
+
+Each class can be initialized with data or parameters, and includes methods for computing:
+- **PMF** (Probability Mass Function)
+- **PDF** (Probability Density Function)
+- **CDF** (Cumulative Distribution Function)
 
 ---
 
-## File Structure
-- **poisson.py** → Contains the class definition for the Poisson distribution.
-- **0-main.py** → Test file used to verify that the class works correctly.
+## Implemented Files
+- `poisson.py`
+- `exponential.py`
+- `normal.py`
+- `binomial.py`
 
 ---
 
-## Class: `Poisson`
-### Constructor:
-```python
-def __init__(self, data=None, lambtha=1.)
+## Example Outputs
+
+| Distribution | Example | Output |
+|---------------|----------|--------|
+| Poisson | λ = 5 → P(9) | 0.03626 |
+| Exponential | λ = 2 → F(1) | 0.86466 |
+| Normal | μ = 70, σ = 10 → CDF(90) | 0.99223 |
+| Binomial | n = 50, p = 0.6 → P(30) | 0.11455 |
+
+---
+
+## Requirements
+- Python 3.5+
+- Follows **PEP8 (pycodestyle)** standards
+- No external libraries (like NumPy) used in class logic
+
+---
+
+## Author
+**Frenki Janaqi**  
+Holberton School – Machine Learning Program
