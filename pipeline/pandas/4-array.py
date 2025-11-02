@@ -3,6 +3,7 @@
 Convert specific DataFrame columns to a numpy.ndarray
 """
 
+
 def array(df):
     """
     Takes a pd.DataFrame and returns the last 10 rows
