@@ -3,6 +3,9 @@
 Concatenate two DataFrames with labeled keys
 """
 
+import pandas as pd
+index = __import__('10-index').index
+
 
 def concat(df1, df2):
     """
@@ -18,8 +21,6 @@ def concat(df1, df2):
     Returns:
         pd.DataFrame: concatenated DataFrame with hierarchical index
     """
-    index = __import__('10-index').index
-
     # Vendos 'Timestamp' si index për të dy DataFrames
     df1 = index(df1)
     df2 = index(df2)
@@ -27,5 +28,5 @@ def concat(df1, df2):
     # Merr vetëm rreshtat nga df2 me Timestamp <= 1417411920
     df2 = df2.loc[:1417411920]
 
-    # Bashkon të dhënat, me çelësa për secilin burim
-    return df2.append(df1, keys=['bitstamp', 'coinbase'])
+    # Bashkon të dhënat me çelësa për secilin burim
+    return pd.concat([df2, df1], keys=['bitstamp', 'coinbase'])
