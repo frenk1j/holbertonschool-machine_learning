@@ -3,9 +3,6 @@
 Convert specific DataFrame columns to a numpy.ndarray
 """
 
-import numpy as np
-
-
 def array(df):
     """
     Takes a pd.DataFrame and returns the last 10 rows
