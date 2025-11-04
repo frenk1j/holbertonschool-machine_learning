@@ -12,17 +12,19 @@ def frequency():
     student_grades = np.random.normal(68, 15, 50)
     plt.figure(figsize=(6.4, 4.8))
 
-    # Create histogram with bins every 10 units (0-100 range)
-    plt.hist(student_grades, bins=range(0, 101, 10), edgecolor='black')
+    # Create histogram with bins every 10 units
+    plt.hist(student_grades, bins=np.arange(0, 101, 10), edgecolor='black')
 
     # Set labels and title
     plt.xlabel('Grades')
     plt.ylabel('Number of Students')
     plt.title('Project A')
 
-    # Set axis limits
+    # Set x-axis range
     plt.xlim(0, 100)
-    plt.ylim(0, 30)
+
+    # Set x-axis ticks every 10 units
+    plt.xticks(np.arange(0, 101, 10))
 
     # Display the plot
     plt.show()
