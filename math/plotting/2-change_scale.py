@@ -25,5 +25,8 @@ def change_scale():
     # Set logarithmic scale for y-axis
     plt.yscale('log')
 
+    # Set x-axis limits to range from 0 to 28650
+    plt.xlim(0, 28650)
+
     # Display the plot
     plt.show()
