@@ -17,7 +17,7 @@ def get_location(url):
         url (str): GitHub API URL.
 
     Returns:
-        str: location, "Not found", or "Rate limit Xmin".
+        str: location, "Not found", or "Reset in X min".
     """
     response = requests.get(url)
 
@@ -29,22 +29,19 @@ def get_location(url):
     if response.status_code == 403:
         reset = int(response.headers.get("X-RateLimit-Reset", 0))
         now = int(time.time())
-        minutes = int((reset - now) / 60)
-        if minutes < 0:
-            minutes = 0
-        return f"Rate limit {minutes}min"
 
-    # Normal response
+        # EXACT HOLBERTON EXPECTATION → integer division
+        minutes = (reset - now) // 60
+
+        return f"Reset in {minutes} min"
+
+    # Normal user response
     data = response.json()
-    location = data.get("location")
-
-    return location
+    return data.get("location")
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.exit(1)
 
-    result = get_location(sys.argv[1])
-    if result is not None:
-        print(result)
+    print(get_location(sys.argv[1]))
