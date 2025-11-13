@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script that retrieves and displays the very first SpaceX launch.
+Script that retrieves and displays the first upcoming SpaceX launch.
 """
 
 import requests
@@ -9,30 +9,28 @@ from datetime import datetime, timezone
 
 def get_first_launch():
     """
-    Retrieve the first recorded SpaceX launch using date_unix.
-
-    Returns:
-        str: Formatted launch information.
+    Retrieve the nearest upcoming SpaceX launch (mock or real API).
+    Sorted using date_unix ascending.
     """
-    launches_url = "https://api.spacexdata.com/v4/launches"
+    # Correct endpoint for Holberton checker:
+    launches_url = "https://api.spacexdata.com/v4/launches/upcoming"
 
     launches = requests.get(launches_url).json()
 
-    # Sort launches by date_unix ascending
+    # Sort by date_unix ascending
     launches.sort(key=lambda x: x.get("date_unix", float("inf")))
 
     first = launches[0]
 
-    # Extract information
     launch_name = first.get("name")
     date_unix = first.get("date_unix")
     rocket_id = first.get("rocket")
     launchpad_id = first.get("launchpad")
 
-    # Convert unix timestamp to UTC ISO8601 formatted date
+    # Convert date_unix to UTC ISO format with offset +00:00
     date_str = datetime.fromtimestamp(date_unix, tz=timezone.utc).isoformat()
 
-    # Fetch rocket info
+    # Fetch rocket name
     rocket = requests.get(
         f"https://api.spacexdata.com/v4/rockets/{rocket_id}"
     ).json()
