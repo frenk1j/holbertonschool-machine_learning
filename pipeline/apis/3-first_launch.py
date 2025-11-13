@@ -1,35 +1,40 @@
 #!/usr/bin/env python3
 """
-Script that retrieves and displays the first upcoming SpaceX launch.
+Module that retrieves and displays the first upcoming SpaceX launch.
+
+Uses the SpaceX public API to fetch and format data about the next launch,
+including its name, scheduled local time, rocket, and launch location.
 """
 
 import requests
-from datetime import datetime, timezone
 
 
 def get_first_launch():
     """
-    Retrieve the nearest upcoming SpaceX launch using date_unix.
-    Sorted ascending. Works with both mock and official API.
+    Retrieve information about the nearest upcoming SpaceX launch.
+
+    The function fetches all upcoming launches from the SpaceX API,
+    sorts them by scheduled time, and returns details about the earliest one.
 
     Returns:
-        str: Formatted string with required launch information.
+        str: A formatted string with the launch name, date (local time),
+        rocket name, and launchpad information.
+        Example output:
+            "Galaxy 33 (15R) & 34 (12R) (2022-10-08T19:05:00-04:00)
+             Falcon 9 - CCSFS SLC 40 (Cape Canaveral)"
     """
     launches_url = "https://api.spacexdata.com/v4/launches/upcoming"
     launches = requests.get(launches_url).json()
 
-    # Sort by date_unix ascending
+    # Sort launches by date_unix ascending
     launches.sort(key=lambda x: x.get("date_unix", float("inf")))
 
     first = launches[0]
 
     launch_name = first.get("name")
-    date_unix = first.get("date_unix")
+    date_local = first.get("date_local")
     rocket_id = first.get("rocket")
     launchpad_id = first.get("launchpad")
-
-    # Convert date_unix to UTC ISO format with +00:00
-    date_str = datetime.fromtimestamp(date_unix, tz=timezone.utc).isoformat()
 
     # Fetch rocket name
     rocket = requests.get(
@@ -45,7 +50,7 @@ def get_first_launch():
     locality = launchpad.get("locality")
 
     return (
-        f"{launch_name} ({date_str}) "
+        f"{launch_name} ({date_local}) "
         f"{rocket_name} - {launchpad_name} ({locality})"
     )
 
