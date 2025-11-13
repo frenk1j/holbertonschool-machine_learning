@@ -9,12 +9,13 @@ from datetime import datetime, timezone
 
 def get_first_launch():
     """
-    Retrieve the nearest upcoming SpaceX launch (mock or real API).
-    Sorted using date_unix ascending.
-    """
-    # Correct endpoint for Holberton checker:
-    launches_url = "https://api.spacexdata.com/v4/launches/upcoming"
+    Retrieve the nearest upcoming SpaceX launch using date_unix.
+    Sorted ascending. Works with both mock and official API.
 
+    Returns:
+        str: Formatted string with required launch information.
+    """
+    launches_url = "https://api.spacexdata.com/v4/launches/upcoming"
     launches = requests.get(launches_url).json()
 
     # Sort by date_unix ascending
@@ -27,7 +28,7 @@ def get_first_launch():
     rocket_id = first.get("rocket")
     launchpad_id = first.get("launchpad")
 
-    # Convert date_unix to UTC ISO format with offset +00:00
+    # Convert date_unix to UTC ISO format with +00:00
     date_str = datetime.fromtimestamp(date_unix, tz=timezone.utc).isoformat()
 
     # Fetch rocket name
