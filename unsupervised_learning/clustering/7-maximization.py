@@ -2,7 +2,7 @@
 """Maximization step for EM algorithm on GMM"""
 
 import numpy as np
-
+kmeans = __import__('1-kmeans').kmeans
 
 def maximization(X, g):
     """Calculates the maximization step in the EM algorithm for a GMM"""
@@ -17,17 +17,15 @@ def maximization(X, g):
     k = g.shape[0]
 
     # Validate probabilities sum to 1 for each point
-    probs = np.sum(g, axis=0)
-    if not np.isclose(probs, np.ones(n)).all():
+    if not np.isclose(np.sum(g, axis=0), np.ones(n)).all():
         return None, None, None
 
-    pi = np.zeros((k,))
-    m = np.zeros((k, d))
-    S = np.zeros((k, d, d))
+    pi = np.sum(g, axis=1) / n            # shape (k,)
+    m = np.dot(g, X) / np.sum(g, axis=1)[:, np.newaxis]  # shape (k,d)
 
-    for i in range(k):
-        pi[i] = np.sum(g[i]) / n
-        m[i] = np.matmul(g[i], X) / np.sum(g[i])
-        S[i] = np.matmul(g[i] * (X - m[i]).T, X - m[i]) / np.sum(g[i])
+    S = np.zeros((k, d, d))
+    for i in range(k):  # Only one loop allowed
+        X_centered = X - m[i]
+        S[i] = (g[i][:, np.newaxis] * X_centered).T @ X_centered / np.sum(g[i])
 
     return pi, m, S
