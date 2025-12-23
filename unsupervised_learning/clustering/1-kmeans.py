@@ -1,54 +1,57 @@
 #!/usr/bin/env python3
-"""
-1-kmeans.py
-Performs K-means clustering on a dataset
-"""
-
+"""Performs K-means Module"""
 import numpy as np
 
 
 def initialize(X, k):
-    """Initializes centroids using a multivariate uniform distribution."""
-    min_vals = np.min(X, axis=0)
-    max_vals = np.max(X, axis=0)
-    return np.random.uniform(min_vals, max_vals, size=(k, X.shape[1]))
+    """Initializes cluster centroids for K-means"""
+
+    _, d = X.shape
+
+    centroids = np.random.uniform(low=np.min(
+        X, axis=0), high=np.max(X, axis=0), size=(k, d))
+
+    return centroids
 
 
 def kmeans(X, k, iterations=1000):
-    """
-    Performs K-means clustering.
+    """Performs K-means on a dataset"""
 
-    Returns:
-        C: numpy.ndarray of shape (k, d) of centroids
-        clss: numpy.ndarray of shape (n,) of cluster indices
-        or (None, None) on failure
-    """
-    if (not isinstance(X, np.ndarray) or X.ndim != 2
-            or not isinstance(k, int) or k <= 0
-            or not isinstance(iterations, int) or iterations <= 0):
+    if not isinstance(X, np.ndarray) or len(X.shape) != 2:
         return None, None
 
-    n, d = X.shape
+    if not isinstance(k, int) or k <= 0:
+        return None, None
+
+    if not isinstance(iterations, int) or iterations <= 0:
+        return None, None
+
     C = initialize(X, k)
-    clss = np.zeros(n, dtype=int)
 
     for _ in range(iterations):
-        old_C = C.copy()
-        # Assign clusters
-        dist = np.linalg.norm(X[:, np.newaxis] - C, axis=2)
-        clss = np.argmin(dist, axis=1)
+        C_prev = np.copy(C)
+        sum_cluster_points = np.zeros_like(C)
+        n_cluster_points = np.zeros((k, 1))
 
-        # Update centroids
+        distances = np.linalg.norm(X[:, np.newaxis, :] - C, axis=-1)
+        clss = np.argmin(distances, axis=1)
+
         for i in range(k):
-            points = X[clss == i]
-            if len(points) == 0:
-                # Reinitialize empty cluster centroid
-                C[i] = np.random.uniform(np.min(X, axis=0), np.max(X, axis=0))
+            cluster_points = X[clss == i]
+            if len(cluster_points) == 0:
+                C[i] = initialize(X, 1)[0]
             else:
-                C[i] = points.mean(axis=0)
+                sum_cluster_points[i] = np.sum(cluster_points, axis=0)
+                n_cluster_points[i] = cluster_points.shape[0]
 
-        # Early stopping
-        if np.allclose(C, old_C):
-            break
+        non_empty_clusters = n_cluster_points.flatten() != 0
+        C[non_empty_clusters] = sum_cluster_points[non_empty_clusters] / \
+            n_cluster_points[non_empty_clusters]
+
+        distances = np.linalg.norm(X[:, np.newaxis, :] - C, axis=-1)
+        clss = np.argmin(distances, axis=1)
+
+        if np.array_equal(C, C_prev):
+            return C, clss
 
     return C, clss
