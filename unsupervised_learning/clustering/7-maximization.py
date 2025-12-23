@@ -25,11 +25,10 @@ def maximization(X, g):
     # Means
     m = np.dot(g, X) / np.sum(g, axis=1)[:, np.newaxis]
 
-    # Covariances (vectorized)
-    X_expanded = X[np.newaxis, :, :] - m[:, np.newaxis, :]  # shape (k, n, d)
-    g_expanded = g[:, :, np.newaxis]                        # shape (k, n, 1)
-    S = np.einsum(
-        'kni,kni->kij', g_expanded * X_expanded, X_expanded
-    ) / np.sum(g, axis=1)[:, np.newaxis, np.newaxis]
+    # Covariances (vectorized, only one loop)
+    S = np.zeros((k, d, d))
+    for i in range(k):  # maximum one loop allowed
+        X_centered = X - m[i]
+        S[i] = (g[i][:, np.newaxis] * X_centered).T @ X_centered / np.sum(g[i])
 
     return pi, m, S
