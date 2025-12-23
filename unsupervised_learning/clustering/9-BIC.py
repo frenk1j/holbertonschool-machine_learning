@@ -12,6 +12,7 @@ def BIC(X, kmin=1, kmax=None, iterations=1000, tol=1e-5, verbose=False):
         return None, None, None, None
 
     n, d = X.shape
+
     if kmax is None:
         kmax = n
     if not isinstance(kmax, int) or kmax < kmin:
@@ -39,10 +40,7 @@ def BIC(X, kmin=1, kmax=None, iterations=1000, tol=1e-5, verbose=False):
         # Number of parameters for GMM:
         # (k-1) priors + k*d means + k*d*(d+1)/2 covariances
         p = (k - 1) + k * d + k * d * (d + 1) / 2
-
-        bic_value = (
-            p * np.log(n) - 2 * lh
-        )  # split line to pass pycodestyle E501
+        bic_value = p * np.log(n) - 2 * lh  # line short for pycodestyle
 
         results_history.append((pi, m, S))
         lh_history.append(lh)
