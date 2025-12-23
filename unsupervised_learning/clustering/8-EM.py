@@ -17,13 +17,13 @@ def expectation_maximization(X,
     """EM in a GMM"""
     if not isinstance(X, np.ndarray) or len(X.shape) != 2:
         return None, None, None, None, None
-    if type(k) != int or k <= 0 or X.shape[0] < k:
+    if not isinstance(k, int) or k <= 0 or X.shape[0] < k:
         return None, None, None, None, None
-    if type(iterations) != int or iterations <= 0:
+    if not isinstance(iterations, int) or iterations <= 0:
         return None, None, None, None, None
-    if type(tol) != float or tol < 0:
+    if not isinstance(tol, float) or tol < 0:
         return None, None, None, None, None
-    if type(verbose) != bool:
+    if not isinstance(verbose, bool):
         return None, None, None, None, None
 
     pi, m, S = initialize(X, k)
@@ -31,16 +31,20 @@ def expectation_maximization(X,
     i = 0
     while i < iterations:
         g, loglikelihood_new = expectation(X, pi, m, S)
-        if verbose is True and (i % 10 == 0):
+        if verbose and i % 10 == 0:
             print("Log Likelihood after {} iterations: {}".format(
-                i, loglikelihood_new.round(5)))
+                i, loglikelihood_new.round(5)
+            ))
         if abs(loglikelihood_new - loglikelihood) <= tol:
             break
         pi, m, S = maximization(X, g)
         i += 1
         loglikelihood = loglikelihood_new
+
     g, loglikelihood_new = expectation(X, pi, m, S)
-    if verbose is True:
+    if verbose:
         print("Log Likelihood after {} iterations: {}".format(
-            i, loglikelihood_new.round(5)))
+            i, loglikelihood_new.round(5)
+        ))
+
     return pi, m, S, g, loglikelihood_new
