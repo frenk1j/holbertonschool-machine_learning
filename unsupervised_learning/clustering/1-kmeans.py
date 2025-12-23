@@ -48,20 +48,22 @@ def kmeans(X, k, iterations=1000):
     clss = np.zeros(n, dtype=int)
 
     for _ in range(iterations):
+        old_C = C.copy()
         # Compute distances and assign clusters
         dist = np.linalg.norm(X[:, np.newaxis] - C, axis=2)
-        new_clss = np.argmin(dist, axis=1)
-
-        # Stop if no change in clusters
-        if np.array_equal(clss, new_clss):
-            break
-        clss = new_clss
+        clss = np.argmin(dist, axis=1)
 
         # Update centroids
         for i in range(k):
             points = X[clss == i]
-            if len(points) > 0:
+            if len(points) == 0:
+                # Reinitialize empty cluster centroid
+                C[i] = np.random.uniform(np.min(X, axis=0), np.max(X, axis=0))
+            else:
                 C[i] = points.mean(axis=0)
-            # **Nuk re-inicializo centroid-et bosh**
+
+        # Early stopping if centroids do not change
+        if np.allclose(C, old_C):
+            break
 
     return C, clss
