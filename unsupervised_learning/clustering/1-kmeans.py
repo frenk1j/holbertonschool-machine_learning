@@ -60,11 +60,8 @@ def kmeans(X, k, iterations=1000):
         # Update centroids
         for i in range(k):
             points = X[clss == i]
-            if len(points) == 0:
-                # Reinitialize empty cluster centroid
-                C[i] = np.random.uniform(
-                    np.min(X, axis=0), np.max(X, axis=0))
-            else:
+            if len(points) > 0:
                 C[i] = points.mean(axis=0)
+            # **Nuk re-inicializo centroid-et bosh**
 
     return C, clss
