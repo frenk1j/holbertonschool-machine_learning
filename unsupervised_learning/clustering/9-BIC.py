@@ -5,49 +5,42 @@ expectation_maximization = __import__('8-EM').expectation_maximization
 
 
 def BIC(X, kmin=1, kmax=None, iterations=1000, tol=1e-5, verbose=False):
-    """Finds the best number of clusters for a GMM using BIC"""
-    if not isinstance(X, np.ndarray) or len(X.shape) != 2:
-        return None, None, None, None
-    if not isinstance(kmin, int) or kmin <= 0:
-        return None, None, None, None
+    """Finds the best number of clusters for a GMM using the Bayesian"""
 
-    n, d = X.shape
-
-    if kmax is None:
-        kmax = n
-    if not isinstance(kmax, int) or kmax < kmin:
-        return None, None, None, None
-    if not isinstance(iterations, int) or iterations <= 0:
-        return None, None, None, None
-    if not isinstance(tol, float) or tol < 0:
-        return None, None, None, None
-    if not isinstance(verbose, bool):
-        return None, None, None, None
-
-    k_values = np.arange(kmin, kmax + 1)
-    results_history = []
-    lh_history = []
-    bic_history = []
-
-    # Only one loop allowed
-    for k in k_values:
-        pi, m, S, g, lh = expectation_maximization(
-            X, k, iterations=iterations, tol=tol, verbose=verbose
-        )
-        if None in (pi, m, S, g, lh):
+    try:
+        if kmax == 1:
             return None, None, None, None
+        n, d = X.shape
+        if kmax is None:
+            kmax = n
+            if kmax >= kmin:
+                return None, None, None, None
 
-        # Number of parameters for GMM:
-        # (k-1) priors + k*d means + k*d*(d+1)/2 covariances
-        p = (k - 1) + k * d + k * d * (d + 1) / 2
-        bic_value = p * np.log(n) - 2 * lh  # line short for pycodestyle
+        k_history = list(range(kmin, kmax + 1))
+        results_history = []
+        lh_history = []
+        bic_history = []
 
-        results_history.append((pi, m, S))
-        lh_history.append(lh)
-        bic_history.append(bic_value)
+        for k in range(kmin, kmax + 1):
+            pi, m, S, g, lh = expectation_maximization(
+                X, k, iterations, tol, verbose)
 
-    min_bic_index = int(np.argmin(bic_history))
-    best_k = int(k_values[min_bic_index])
-    best_result = results_history[min_bic_index]
+            if pi is None or m is None or S is None or g is None or \
+               lh is None:
+                return None, None, None, None
 
-    return best_k, best_result, np.array(lh_history), np.array(bic_history)
+            num_parameters = k + k * d + k * d * (d + 1) // 2 - 1
+            bic = num_parameters * np.log(n) - 2 * lh
+
+            lh_history.append(lh)
+            results_history.append((pi, m, S))
+            bic_history.append(bic)
+
+        min_bic_index = np.argmin(bic_history)
+        best_k = k_history[min_bic_index]
+        best_result = results_history[min_bic_index]
+
+        return (best_k, best_result, np.array(lh_history),
+                np.array(bic_history))
+    except Exception:
+        return None, None, None, None
