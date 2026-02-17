@@ -28,8 +28,12 @@ def convolve(images, kernels, padding='same', stride=(1, 1)):
 
     # Determine padding
     if padding == 'same':
-        ph = ((h - 1) * sh + kh - h) // 2 + 1 * (((h - 1) * sh + kh - h) % 2 != 0)
-        pw = ((w - 1) * sw + kw - w) // 2 + 1 * (((w - 1) * sw + kw - w) % 2 != 0)
+        ph = ((h - 1) * sh + kh - h) // 2 + 1 * (
+            ((h - 1) * sh + kh - h) % 2 != 0
+        )
+        pw = ((w - 1) * sw + kw - w) // 2 + 1 * (
+            ((w - 1) * sw + kw - w) % 2 != 0
+        )
     elif padding == 'valid':
         ph, pw = 0, 0
     else:
@@ -52,8 +56,12 @@ def convolve(images, kernels, padding='same', stride=(1, 1)):
         for j in range(output_w):
             h_start = i * sh
             w_start = j * sw
-            region = padded_images[:, h_start:h_start + kh, w_start:w_start + kw, :]
+            region = padded_images[
+                :, h_start:h_start + kh, w_start:w_start + kw, :
+            ]
             for k in range(nc):
-                output[:, i, j, k] = np.sum(region * kernels[:, :, :, k], axis=(1, 2, 3))
+                output[:, i, j, k] = np.sum(
+                    region * kernels[:, :, :, k], axis=(1, 2, 3)
+                )
 
     return output
