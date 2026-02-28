@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+"""Module for convolutional forward propagation."""
 import numpy as np
 
 
