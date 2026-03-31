@@ -1,42 +1,48 @@
-def preprocess_images(self, images):
-    """Preprocess images for input to the Darknet model.
+#!/usr/bin/env python3
+"""Module for YOLO v3 object detection - Task 5: Preprocess Images."""
 
-    Resizes images with inter-cubic interpolation and rescales pixel
-    values to the range [0, 1].
+import cv2
+import numpy as np
 
-    Args:
-        images: list of images as numpy.ndarrays
 
-    Returns:
-        tuple of (pimages, image_shapes):
-            pimages: numpy.ndarray of shape (ni, input_h, input_w, 3)
-            image_shapes: numpy.ndarray of shape (ni, 2)
-                containing original height and width of each image
-    """
-    input_h = int(self.model.input.shape[1])
-    input_w = int(self.model.input.shape[2])
+class Yolo:
+    """Class that uses the Yolo v3 algorithm to perform object detection."""
 
-    pimages = []
-    image_shapes = []
+    def preprocess_images(self, images):
+        """Preprocess images for input to the Darknet model.
 
-    for image in images:
-        image_shapes.append(image.shape[:2])
+        Resizes images with inter-cubic interpolation and rescales pixel
+        values to the range [0, 1].
 
-        resized = cv2.resize(
-            image,
-            (input_w, input_h),
-            interpolation=cv2.INTER_CUBIC
-        )
+        Args:
+            images: list of images as numpy.ndarrays
 
-        # BGR → RGB
-        resized = resized[..., ::-1]
+        Returns:
+            tuple of (pimages, image_shapes):
+                pimages: numpy.ndarray of shape (ni, input_h, input_w, 3)
+                image_shapes: numpy.ndarray of shape (ni, 2)
+        """
+        input_h = int(self.model.input.shape[1])
+        input_w = int(self.model.input.shape[2])
 
-        # Normalize to [0, 1]
-        resized = resized / 255.0
+        pimages = []
+        image_shapes = []
 
-        pimages.append(resized)
+        for image in images:
+            image_shapes.append(image.shape[:2])
 
-    pimages = np.array(pimages, dtype=np.float32)
-    image_shapes = np.array(image_shapes)
+            resized = cv2.resize(
+                image,
+                (input_w, input_h),
+                interpolation=cv2.INTER_CUBIC
+            )
 
-    return pimages, image_shapes
+            resized = resized[..., ::-1]
+            resized = resized / 255.0
+
+            pimages.append(resized)
+
+        pimages = np.array(pimages, dtype=np.float32)
+        image_shapes = np.array(image_shapes)
+
+        return pimages, image_shapes
