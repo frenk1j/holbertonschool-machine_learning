@@ -1,193 +1,358 @@
 #!/usr/bin/env python3
-"""YOLO object detection - Task 5: Preprocess images"""
-import numpy as np
+"""
+    Initialize Yolo
+"""
 import cv2
 import os
-import glob
 import tensorflow as tf
+import numpy as np
 
 
 class Yolo:
-    """Uses Darknet YOLO v3 algorithm for object detection."""
+    """
+        Class Yolo uses the Yolo v3 algorithm to perform object detection
+    """
 
     def __init__(self, model_path, classes_path, class_t, nms_t, anchors):
         """
-        Initialize Yolo.
+            Class constructor of Yolo class
 
-        model_path: path to Darknet Keras model
-        classes_path: path to list of class names
-        class_t: box score threshold for initial filtering
-        nms_t: IOU threshold for non-max suppression
-        anchors: anchor boxes array
+            :param model_path: path where Darknet Keras model is stored
+            :param classes_path:path where list of class names,
+                in order of index
+            :param class_t: float, box score threshold
+                for initial filtering step
+            :param nms_t: float, IOU threshold for non-max suppression
+            :param anchors: ndarray, shape(outputs, anchor_boxes, 2)
+                all anchor boxes
+                outputs: number of outputs (prediction) made by Darknet model
+                anchor_boxes: number of anchor boxes used for each prediction
+                2: [anchor_box_width, anchor_box_height]
+
         """
         self.model = tf.keras.models.load_model(model_path)
+        self.class_names = []
         with open(classes_path, 'r') as f:
-            self.class_names = [line.strip() for line in f.readlines()]
+            for line in f:
+                line = line.strip()
+                self.class_names.append(line)
         self.class_t = class_t
         self.nms_t = nms_t
         self.anchors = anchors
 
     def process_outputs(self, outputs, image_size):
-        """Process Darknet model outputs."""
+        """
+            Function to process outputs
+
+        :param outputs: list of ndarray, predictions from a single image
+                each output,
+                shape(grid_height, grid_width, anchor_boxes, 4+1+classes)
+                grid_height, grid_width: height and width of grid
+                 used for the output
+                anchor_boxes: number of anchor boxes used
+                4 => (t_x, t_y, t_w, t_h)
+                1 => box_confidence
+                classes => classes probabilities for all classes
+        :param image_size: ndarray,
+               image's original size [image_height, image_width]
+
+        :return: tuple (boxes, box_confidences, box_class_probs):
+                boxes: list of ndarrays,
+                       shape(grid_height, grid_width, anchor_boxes, 4)
+                        processed boundary boxes for each output
+                        4 => (x1,y1, x2, y2)
+                boxe_confidences: list ndarray,
+                    shape(grid_height, grid_width, anchor_boxes, 1)
+                    boxe confidences for each output
+                box_class_probs: list ndarray,
+                    shape(grid_height, grid_width, anchor_boxes, classes)
+                    box's class probabilities for each output
+        """
+        # extract image size
+        image_height, image_height = image_size
+
         boxes = []
         box_confidences = []
         box_class_probs = []
 
-        image_h, image_w = image_size
+        # process for each output
+        for idx, output in enumerate(outputs):
+            # extract height, width, number of anchor box for current output
+            grid_height, grid_width, nbr_anchor, _ = output.shape
 
-        for i, output in enumerate(outputs):
-            grid_h, grid_w, anchor_boxes, _ = output.shape
+            # extract coordinate of output NN
+            t_x = output[:, :, :, 0]
+            t_y = output[:, :, :, 1]
+            t_w = output[:, :, :, 2]
+            t_h = output[:, :, :, 3]
 
-            box_conf = 1 / (1 + np.exp(-output[:, :, :, 4:5]))
-            box_class_prob = 1 / (1 + np.exp(-output[:, :, :, 5:]))
+            # grid coordinate
+            grid_x, grid_y = np.meshgrid(np.arange(grid_width),
+                                         np.arange(grid_height))
 
-            box_confidences.append(box_conf)
-            box_class_probs.append(box_class_prob)
+            # Repeat grid coordinate for each anchor box
+            grid_x = np.expand_dims(grid_x, axis=-1)
+            grid_y = np.expand_dims(grid_y, axis=-1)
 
-            tx = output[:, :, :, 0]
-            ty = output[:, :, :, 1]
-            tw = output[:, :, :, 2]
-            th = output[:, :, :, 3]
+            # extract anchor_box_width, anchor_box_height
+            p_w = self.anchors[idx, :, 0]
+            p_h = self.anchors[idx, :, 1]
 
-            cx = np.arange(grid_w).reshape(1, grid_w)
-            cx = np.repeat(cx, grid_h, axis=0)
-            cy = np.arange(grid_h).reshape(grid_h, 1)
-            cy = np.repeat(cy, grid_w, axis=1)
+            # size image
+            image_height, image_width = image_size
 
-            cx = cx[:, :, np.newaxis]
-            cy = cy[:, :, np.newaxis]
+            # sigmoid : grid scale (value between 0 and 1)
+            # + c_x or c_y : coordinate of cells in the grid
+            b_x = ((1.0 / (1.0 + np.exp(-t_x))) + grid_x) / grid_width
+            b_y = ((1.0 / (1.0 + np.exp(-t_y))) + grid_y) / grid_height
+            # exp for predicted height and width
+            b_w = p_w * np.exp(t_w)
+            b_w /= self.model.input.shape[1]
+            b_h = p_h * np.exp(t_h)
+            b_h /= self.model.input.shape[2]
 
-            bx = (1 / (1 + np.exp(-tx)) + cx) / grid_w
-            by = (1 / (1 + np.exp(-ty)) + cy) / grid_h
+            # conv in pixel : absolute coordinate
+            x1 = (b_x - b_w / 2) * image_width
+            y1 = (b_y - b_h / 2) * image_height
+            x2 = (b_w / 2 + b_x) * image_width
+            y2 = (b_h / 2 + b_y) * image_height
 
-            anchors_w = self.anchors[i, :, 0]
-            anchors_h = self.anchors[i, :, 1]
-
-            input_w = self.model.input.shape[1]
-            input_h = self.model.input.shape[2]
-
-            bw = (np.exp(tw) * anchors_w) / input_w
-            bh = (np.exp(th) * anchors_h) / input_h
-
-            x1 = (bx - bw / 2) * image_w
-            y1 = (by - bh / 2) * image_h
-            x2 = (bx + bw / 2) * image_w
-            y2 = (by + bh / 2) * image_h
-
-            box = np.stack([x1, y1, x2, y2], axis=-1)
+            # Update box array with box coordinates and dimensions
+            box = np.zeros((grid_height, grid_width, nbr_anchor, 4))
+            box[:, :, :, 0] = x1
+            box[:, :, :, 1] = y1
+            box[:, :, :, 2] = x2
+            box[:, :, :, 3] = y2
             boxes.append(box)
+
+            confidences = output[:, :, :, 4:5]
+            sigmoid_confidence = 1 / (1 + np.exp(-confidences))
+            class_probs = output[:, :, :, 5:]
+            sigmoid_class_probs = 1 / (1 + np.exp(-class_probs))
+
+            box_confidences.append(sigmoid_confidence)
+            box_class_probs.append(sigmoid_class_probs)
 
         return boxes, box_confidences, box_class_probs
 
     def filter_boxes(self, boxes, box_confidences, box_class_probs):
-        """Filter boxes based on class confidence score."""
-        filtered_boxes = []
-        filtered_scores = []
-        filtered_classes = []
+        """
+            Public method to filter boxes of preprocess method
+
+        :param boxes: list of ndarray,
+              shape(grid_height, grid_width, anchor_boxes, 4)
+             processed boundary boxes for each output
+        :param box_confidences: list of ndarray,
+            shape(grid_height, grid_width, anchor_boxes, 1)
+            processed box confidences for each output
+        :param box_class_probs: list of ndarray,
+            shape(grid_height, grid_width, anchor_boxes, classes)
+            processed box class probabilities for each output
+        :return: tuple of (filtered_boxes, box_classes, box_scores)
+            - filtered_boxes: ndarray, shape(?, 4)
+                containing all of the filtered bounding boxes
+            - box_classes: ndarray, shape(?,)
+                 class number that each box in filtered_boxes predicts
+            - box_scores: ndarray,  shape(?)
+                box scores for each box in filtered_boxes
+        """
+
+        # initialize with 4 col to be wompatible with mask
+        filtered_boxes = np.empty((0, 4))
+        box_classes = np.empty((0,), dtype=int)
+        box_scores = np.empty(0, dtype=int)
 
         for i in range(len(boxes)):
-            scores = box_confidences[i] * box_class_probs[i]
-            class_scores = np.max(scores, axis=-1)
-            class_idx = np.argmax(scores, axis=-1)
+            # box score
+            box_score = np.multiply(box_confidences[i], box_class_probs[i])
 
-            mask = class_scores >= self.class_t
+            # find box_classes with max box_scores
+            box_classes_i = np.argmax(box_score, axis=-1)
+            box_class_score = np.max(box_score, axis=-1)
 
-            filtered_boxes.append(boxes[i][mask])
-            filtered_scores.append(class_scores[mask])
-            filtered_classes.append(class_idx[mask])
+            # create filtering mask
+            filtering_mask = box_class_score >= self.class_t
 
-        filtered_boxes = np.concatenate(filtered_boxes, axis=0)
-        filtered_scores = np.concatenate(filtered_scores, axis=0)
-        filtered_classes = np.concatenate(filtered_classes, axis=0)
+            # apply mask and concatenate boxes
+            filtered_boxes = np.concatenate((filtered_boxes,
+                                             boxes[i][filtering_mask]), axis=0)
+            box_classes = (
+                np.concatenate((box_classes,
+                                box_classes_i[filtering_mask]),
+                               axis=0))
+            box_scores = np.concatenate((box_scores,
+                                         box_class_score[filtering_mask]),
+                                        axis=0)
 
-        return filtered_boxes, filtered_scores, filtered_classes
+        return filtered_boxes, box_classes, box_scores
+
+    def iou(self, box1, box2):
+        """
+            Execute Intersection over Union (IoU) between 2 box
+
+            :param box1: coordinate box1
+            :param box2: coordinate box2
+
+            :return: float, the IoU value between the two bounding boxes
+        """
+        b1x1, b1y1, b1x2, b1y2 = tuple(box1)
+        b2x1, b2y1, b2x2, b2y2 = tuple(box2)
+
+        # calculate intersection of box1 and box2
+        x1 = np.maximum(b1x1, b2x1)
+        y1 = np.maximum(b1y1, b2y1)
+        x2 = np.minimum(b1x2, b2x2)
+        y2 = np.minimum(b1y2, b2y2)
+
+        # calculate inter and  Union(A,B) = A + B - Inter(A,B)
+        intersection = np.maximum(0, x2 - x1) * np.maximum(0, y2 - y1)
+        area1 = (b1x2 - b1x1) * (b1y2 - b1y1)
+        area2 = (b2x2 - b2x1) * (b2y2 - b2y1)
+        union = area1 + area2 - intersection
+
+        # compute score IoU
+        result = intersection / union
+
+        return result
 
     def non_max_suppression(self, filtered_boxes, box_classes, box_scores):
-        """Apply non-max suppression to filtered boxes."""
-        kept_boxes = []
-        kept_scores = []
-        kept_classes = []
+        """
+            method to apply Non-max Suppression
+            (suppress overlapping box)
 
+            :param filtered_boxes: ndarray, shape(?,4)
+                    all filtered bounding boxes
+            :param box_classes: ndarray, shape(?,)
+                    class number for class that filtered_boxes predicts
+            :param box_scores: ndarray, shape(?)
+                box scores for each box in filtered_boxes
+
+            :return: tuple (box_predictions, predicted_box_classes,
+             predicted_box_scores)
+                - box_predictions : ndarray, shape(?,4)
+                    all predicted bounding boxes ordered by class and box score
+                - predicted_box_classes: ndarray, shape(?,)
+                    class number for box_predictions ordered by class and box
+                    score
+                - predicted_box_scores: ndarray, shape(?)
+                    box scores for box_predictions ordered by class and box
+                    score
+        """
+        box_predictions = []
+        predicted_box_classes = []
+        predicted_box_scores = []
+
+        # Iterate over each unique class
         unique_classes = np.unique(box_classes)
-
         for cls in unique_classes:
-            mask = box_classes == cls
-            cls_boxes = filtered_boxes[mask]
-            cls_scores = box_scores[mask]
 
-            x1 = cls_boxes[:, 0]
-            y1 = cls_boxes[:, 1]
-            x2 = cls_boxes[:, 2]
-            y2 = cls_boxes[:, 3]
+            # Get indices of boxes (idx line) belonging to the current class
+            class_indices = np.where(box_classes == cls)[0]
 
-            areas = (x2 - x1 + 1) * (y2 - y1 + 1)
-            order = cls_scores.argsort()[::-1]
+            # boxes and scores for the current class
+            class_boxes = filtered_boxes[class_indices]
+            class_scores = box_scores[class_indices]
 
-            keep = []
-            while order.size > 0:
-                i = order[0]
-                keep.append(i)
+            # while boxes remain in the class_boxes list
+            while len(class_boxes) > 0:
+                # find the index of highest scoring box for the class
+                max_score_index = np.argmax(class_scores)
 
-                xx1 = np.maximum(x1[i], x1[order[1:]])
-                yy1 = np.maximum(y1[i], y1[order[1:]])
-                xx2 = np.minimum(x2[i], x2[order[1:]])
-                yy2 = np.minimum(y2[i], y2[order[1:]])
+                # add box, class, and score to output lists
+                box_predictions.append(class_boxes[max_score_index])
+                predicted_box_classes.append(cls)
+                predicted_box_scores.append(class_scores[max_score_index])
 
-                inter_w = np.maximum(0, xx2 - xx1 + 1)
-                inter_h = np.maximum(0, yy2 - yy1 + 1)
-                inter = inter_w * inter_h
+                # get iou scores for max box and each box in class_boxes
+                ious = np.array([self.iou(class_boxes[max_score_index],
+                                          box) for box in class_boxes])
 
-                iou = inter / (areas[i] + areas[order[1:]] - inter)
-                order = order[np.where(iou <= self.nms_t)[0] + 1]
+                # find all boxes with an IoU greater than the threshold
+                # Use [0] to get the array directly
+                above_threshold = np.where(ious > self.nms_t)[0]
 
-            kept_boxes.append(cls_boxes[keep])
-            kept_scores.append(cls_scores[keep])
-            kept_classes.append(np.full(len(keep), cls))
+                # remove boxes and their scores that fell above the threshold
+                if len(class_boxes) > 0:
+                    class_boxes = np.delete(class_boxes, above_threshold,
+                                            axis=0)
+                    class_scores = np.delete(class_scores, above_threshold)
 
-        kept_boxes = np.concatenate(kept_boxes, axis=0)
-        kept_scores = np.concatenate(kept_scores, axis=0)
-        kept_classes = np.concatenate(kept_classes, axis=0)
+        # Convert output lists to numpy arrays
+        box_predictions = np.array(box_predictions)
+        predicted_box_classes = np.array(predicted_box_classes)
+        predicted_box_scores = np.array(predicted_box_scores)
 
-        return kept_boxes, kept_classes, kept_scores
+        return box_predictions, predicted_box_classes, predicted_box_scores
 
     @staticmethod
     def load_images(folder_path):
         """
-        Load images from a folder.
+            method to load images
 
-        folder_path: path to folder holding all images to load
-        Returns: tuple of (images, image_paths)
+            :param folder_path: string, path the folder holding
+                all the images to load
+
+            :return: tuple (images, image_paths)
+                images : list of images as ndarray
+                image_paths: list of paths to the
+                individual images in images
         """
-        image_paths = glob.glob(os.path.join(folder_path, '*'))
-        images = [cv2.imread(path) for path in image_paths]
-        return images, image_paths
+        images = []
+        images_paths = []
+        for filename in os.listdir(folder_path):
+            # check format of image
+            if filename.endswith(('.jpg', '.jpeg', '.png', '.bmp')):
+                # construct path
+                images_path = os.path.join(folder_path, filename)
+                # extract image with openCV
+                image = cv2.imread(images_path)
+                if image is not None:
+                    images.append(image)
+                    images_paths.append(images_path)
+
+        return images, images_paths
 
     def preprocess_images(self, images):
         """
-        Preprocess images for Darknet model input.
+            method to preprocess images
+            resize with intercubic interpolation
+            rescale image in range [0, 1]
 
-        images: list of images as numpy.ndarrays
-        Returns: tuple of (pimages, image_shapes)
-            pimages: ndarray of shape (ni, input_h, input_w, 3)
-            image_shapes: ndarray of shape (ni, 2) with original (h, w)
+            :param images: list of images as ndarray
+
+            :return: tuple of (pimages, image_shapes)
+                pimages: ndarray, shape(ni,input_h,input_w,3)
+                    ni: number of images that were preprocessed
+                    input_h: input height for Darknet model
+                    input_w: input width for Darknet model
+                    3: number of channels
+                image_shapes: ndarray, shape(ni,2)
+                    original height and width
+                    2 => (image_height, image_width)
         """
-        input_h = self.model.input.shape[1]
-        input_w = self.model.input.shape[2]
-
         pimages = []
         image_shapes = []
 
         for image in images:
-            image_shapes.append(image.shape[:2])
-            rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            resized = cv2.resize(
-                rgb,
-                (input_w, input_h),
-                interpolation=cv2.INTER_CUBIC
-            )
-            rescaled = resized / 255.0
-            pimages.append(rescaled)
+            # extract height, width, channel from image
+            h, w, c = image.shape
+            image_shapes.append([h, w])
 
+            # resize image
+            input_h = self.model.input.shape[1]
+            input_w = self.model.input.shape[2]
+            resized_img = cv2.resize(image,
+                                     dsize=(
+                                         input_h,
+                                         input_w),
+                                     interpolation=cv2.INTER_CUBIC)
+
+            # rescale
+            resized_img = resized_img / 255.0
+
+            pimages.append(resized_img)
+
+        # conversion in ndarray
         pimages = np.array(pimages)
         image_shapes = np.array(image_shapes)
 
