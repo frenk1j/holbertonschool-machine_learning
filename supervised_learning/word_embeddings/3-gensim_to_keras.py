@@ -1,32 +1,40 @@
 #!/usr/bin/env python3
-"""Module for converting a gensim Word2Vec model to a Keras Embedding layer"""
+"""
+NLP - Word Embeddings - Task 3
+
+Utility to convert a trained Gensim Word2Vec model into an Embedding layer.
+"""
+
 import tensorflow as tf
 
 
 def gensim_to_keras(model):
-    """Converts a gensim word2vec model to a keras Embedding layer.
-
-    Args:
-        model: a trained gensim word2vec model
-
-    Returns:
-        A trainable keras Embedding layer initialized with the model weights
     """
-    # Get the keyed vectors from the model
-    keyed_vectors = model.wv
+    Converts a Gensim Word2Vec model into a Keras Embedding layer.
 
-    # Get the weights (word vectors) as a numpy array
-    weights = keyed_vectors.vectors
+    The returned layer uses the learned word vectors from `model.wv` as
+    its weight matrix, so that token indices produced with the same
+    vocabulary ordering can be fed directly into this embedding layer.
 
-    # vocab size and embedding dimension
-    vocab_size, vector_size = weights.shape
+    Parameters
+    ----------
+    model : gensim.models.Word2Vec
+        A trained Gensim Word2Vec model whose embeddings will initialize
+        the Keras Embedding layer.
 
-    # Create a trainable Keras Embedding layer with the pretrained weights
-    embedding_layer = tf.keras.layers.Embedding(
-        input_dim=vocab_size,
-        output_dim=vector_size,
+    Returns
+    -------
+    tf.keras.layers.Embedding
+        A Keras Embedding layer initialized with the Word2Vec weights.
+        The layer is trainable, so the embeddings can be fine-tuned
+        during downstream model training.
+    """
+    keys = model.wv
+    weights = keys.vectors
+
+    return tf.keras.layers.Embedding(
+        input_dim=weights.shape[0],
+        output_dim=weights.shape[1],
         weights=[weights],
-        trainable=True
+        trainable=True,
     )
-
-    return embedding_layer
